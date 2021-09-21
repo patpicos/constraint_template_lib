@@ -1,0 +1,136 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: Controls the allowlist of Flexvolume drivers. Introduced in ACM v1.1.0.
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Controls the allowlist of Flexvolume drivers. Introduced in ACM v1.1.0."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"k8spspflexvolumes","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"K8sPSPFlexVolumes"},"validation":{"openAPIV3Schema":{"properties":{"allowedFlexVolumes":{"items":{"properties":{"driver":{"type":"string"}},"type":"object"},"type":"array"}}}}}},"targets":[{"rego":"package k8spspflexvolumes\n\nviolation[{\"msg\": msg, \"details\": {}}] {\n    volume := input_flexvolumes[_]\n    not input_flexvolumes_allowed(volume)\n    msg := sprintf(\"FlexVolume %v is not allowed, pod: %v. Allowed drivers: %v\", [volume, input.review.object.metadata.name, input.parameters.allowedFlexVolumes])\n}\n\ninput_flexvolumes_allowed(volume) {\n    input.parameters.allowedFlexVolumes[_].driver == volume.flexVolume.driver\n}\n\ninput_flexvolumes[v] {\n    v := input.review.object.spec.volumes[_]\n    has_field(v, \"flexVolume\")\n}\n\n# has_field returns whether an object has a field\nhas_field(object, field) = true {\n    object[field]\n}\n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:21Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+              f:openAPIV3Schema:
+                .: {}
+                f:properties: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:21Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:16:42Z"
+  name: k8spspflexvolumes
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283402"
+  uid: 4b9986f4-2b46-459e-a08c-6018f287eb5c
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sPSPFlexVolumes
+      validation:
+        legacySchema: true
+        openAPIV3Schema:
+          properties:
+            allowedFlexVolumes:
+              items:
+                properties:
+                  driver:
+                    type: string
+                type: object
+              type: array
+  targets:
+  - rego: |
+      package k8spspflexvolumes
+
+      violation[{"msg": msg, "details": {}}] {
+          volume := input_flexvolumes[_]
+          not input_flexvolumes_allowed(volume)
+          msg := sprintf("FlexVolume %v is not allowed, pod: %v. Allowed drivers: %v", [volume, input.review.object.metadata.name, input.parameters.allowedFlexVolumes])
+      }
+
+      input_flexvolumes_allowed(volume) {
+          input.parameters.allowedFlexVolumes[_].driver == volume.flexVolume.driver
+      }
+
+      input_flexvolumes[v] {
+          v := input.review.object.spec.volumes[_]
+          has_field(v, "flexVolume")
+      }
+
+      # has_field returns whether an object has a field
+      has_field(object, field) = true {
+          object[field]
+      }
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: 4b9986f4-2b46-459e-a08c-6018f287eb5c
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: 4b9986f4-2b46-459e-a08c-6018f287eb5c
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: 4b9986f4-2b46-459e-a08c-6018f287eb5c
+  created: true

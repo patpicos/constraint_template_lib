@@ -1,0 +1,137 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: Prohibits RoleBindings or ClusterRoleBindings with subjects matching
+      any `disallowedSubjects` passed as parameters. Introduced in ACM v1.3.1.
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Prohibits RoleBindings or ClusterRoleBindings with subjects matching any `disallowedSubjects` passed as parameters. Introduced in ACM v1.3.1."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"k8sdisallowedrolebindingsubjects","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"K8sDisallowedRoleBindingSubjects"},"validation":{"openAPIV3Schema":{"properties":{"disallowedSubjects":{"items":{"properties":{"apiGroup":{"type":"string"},"kind":{"type":"string"},"name":{"type":"string"}},"type":"object"},"type":"array"}}}}}},"targets":[{"rego":"package k8sdisallowedrolebindingsubjects\n\nis_rolebinding_or_cluster_rolebinding(kind) {\n  kind.group == \"rbac.authorization.k8s.io\"\n  kinds := {\"RoleBinding\", \"ClusterRoleBinding\"}\n  kinds[kind.kind]\n}\n\nviolation[{\"msg\": msg}] {\n  is_rolebinding_or_cluster_rolebinding(input.review.kind)\n  disallowedSubject := input.parameters.disallowedSubjects[_]\n  inputSubject := input.review.object.subjects[_]\n  disallowedSubject.name == inputSubject.name\n  disallowedSubject.kind == inputSubject.kind\n  disallowedSubject.apiGroup == inputSubject.apiGroup\n  msg := sprintf(\"\u003c%v\u003e has disallowed apiGroup \u003c%v\u003e, kind \u003c%v\u003e and name \u003c%v\u003e\", [input.review.object.metadata.name, inputSubject.apiGroup, inputSubject.kind, inputSubject.name])\n}\n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:21Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+              f:openAPIV3Schema:
+                .: {}
+                f:properties: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:21Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:15:57Z"
+  name: k8sdisallowedrolebindingsubjects
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283504"
+  uid: 10867cca-2a8b-4511-9e9b-b5add64f3422
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sDisallowedRoleBindingSubjects
+      validation:
+        legacySchema: true
+        openAPIV3Schema:
+          properties:
+            disallowedSubjects:
+              items:
+                properties:
+                  apiGroup:
+                    type: string
+                  kind:
+                    type: string
+                  name:
+                    type: string
+                type: object
+              type: array
+  targets:
+  - rego: |
+      package k8sdisallowedrolebindingsubjects
+
+      is_rolebinding_or_cluster_rolebinding(kind) {
+        kind.group == "rbac.authorization.k8s.io"
+        kinds := {"RoleBinding", "ClusterRoleBinding"}
+        kinds[kind.kind]
+      }
+
+      violation[{"msg": msg}] {
+        is_rolebinding_or_cluster_rolebinding(input.review.kind)
+        disallowedSubject := input.parameters.disallowedSubjects[_]
+        inputSubject := input.review.object.subjects[_]
+        disallowedSubject.name == inputSubject.name
+        disallowedSubject.kind == inputSubject.kind
+        disallowedSubject.apiGroup == inputSubject.apiGroup
+        msg := sprintf("<%v> has disallowed apiGroup <%v>, kind <%v> and name <%v>", [input.review.object.metadata.name, inputSubject.apiGroup, inputSubject.kind, inputSubject.name])
+      }
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: 10867cca-2a8b-4511-9e9b-b5add64f3422
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: 10867cca-2a8b-4511-9e9b-b5add64f3422
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: 10867cca-2a8b-4511-9e9b-b5add64f3422
+  created: true

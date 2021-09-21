@@ -1,0 +1,167 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: Controls Linux capabilities. Introduced in ACM v1.3.0.
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Controls Linux capabilities. Introduced in ACM v1.3.0."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"k8spspcapabilities","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"K8sPSPCapabilities"},"validation":{"openAPIV3Schema":{"properties":{"allowedCapabilities":{"items":{"type":"string"},"type":"array"},"requiredDropCapabilities":{"items":{"type":"string"},"type":"array"}}}}}},"targets":[{"rego":"package capabilities\n\nviolation[{\"msg\": msg}] {\n  container := input.review.object.spec.containers[_]\n  has_disallowed_capabilities(container)\n  msg := sprintf(\"container \u003c%v\u003e has a disallowed capability. Allowed capabilities are %v\", [container.name, get_default(input.parameters, \"allowedCapabilities\", \"NONE\")])\n}\n\nviolation[{\"msg\": msg}] {\n  container := input.review.object.spec.containers[_]\n  missing_drop_capabilities(container)\n  msg := sprintf(\"container \u003c%v\u003e is not dropping all required capabilities. Container must drop all of %v\", [container.name, input.parameters.requiredDropCapabilities])\n}\n\n\n\nviolation[{\"msg\": msg}] {\n  container := input.review.object.spec.initContainers[_]\n  has_disallowed_capabilities(container)\n  msg := sprintf(\"init container \u003c%v\u003e has a disallowed capability. Allowed capabilities are %v\", [container.name, get_default(input.parameters, \"allowedCapabilities\", \"NONE\")])\n}\n\nviolation[{\"msg\": msg}] {\n  container := input.review.object.spec.initContainers[_]\n  missing_drop_capabilities(container)\n  msg := sprintf(\"init container \u003c%v\u003e is not dropping all required capabilities. Container must drop all of %v\", [container.name, input.parameters.requiredDropCapabilities])\n}\n\n\nhas_disallowed_capabilities(container) {\n  allowed := {c | c := input.parameters.allowedCapabilities[_]}\n  not allowed[\"*\"]\n  capabilities := {c | c := container.securityContext.capabilities.add[_]}\n  count(capabilities - allowed) \u003e 0\n}\n\nmissing_drop_capabilities(container) {\n  must_drop := {c | c := input.parameters.requiredDropCapabilities[_]}\n  dropped := {c | c := container.securityContext.capabilities.drop[_]}\n  count(must_drop - dropped) \u003e 0\n}\n\nget_default(obj, param, _default) = out {\n  out = obj[param]\n}\n\nget_default(obj, param, _default) = out {\n  not obj[param]\n  not obj[param] == false\n  out = _default\n}\n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:21Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+              f:openAPIV3Schema:
+                .: {}
+                f:properties: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:21Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:16:39Z"
+  name: k8spspcapabilities
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283394"
+  uid: a60a69f7-302f-47d2-b7fe-1d6ee0d01975
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sPSPCapabilities
+      validation:
+        legacySchema: true
+        openAPIV3Schema:
+          properties:
+            allowedCapabilities:
+              items:
+                type: string
+              type: array
+            requiredDropCapabilities:
+              items:
+                type: string
+              type: array
+  targets:
+  - rego: |
+      package capabilities
+
+      violation[{"msg": msg}] {
+        container := input.review.object.spec.containers[_]
+        has_disallowed_capabilities(container)
+        msg := sprintf("container <%v> has a disallowed capability. Allowed capabilities are %v", [container.name, get_default(input.parameters, "allowedCapabilities", "NONE")])
+      }
+
+      violation[{"msg": msg}] {
+        container := input.review.object.spec.containers[_]
+        missing_drop_capabilities(container)
+        msg := sprintf("container <%v> is not dropping all required capabilities. Container must drop all of %v", [container.name, input.parameters.requiredDropCapabilities])
+      }
+
+
+
+      violation[{"msg": msg}] {
+        container := input.review.object.spec.initContainers[_]
+        has_disallowed_capabilities(container)
+        msg := sprintf("init container <%v> has a disallowed capability. Allowed capabilities are %v", [container.name, get_default(input.parameters, "allowedCapabilities", "NONE")])
+      }
+
+      violation[{"msg": msg}] {
+        container := input.review.object.spec.initContainers[_]
+        missing_drop_capabilities(container)
+        msg := sprintf("init container <%v> is not dropping all required capabilities. Container must drop all of %v", [container.name, input.parameters.requiredDropCapabilities])
+      }
+
+
+      has_disallowed_capabilities(container) {
+        allowed := {c | c := input.parameters.allowedCapabilities[_]}
+        not allowed["*"]
+        capabilities := {c | c := container.securityContext.capabilities.add[_]}
+        count(capabilities - allowed) > 0
+      }
+
+      missing_drop_capabilities(container) {
+        must_drop := {c | c := input.parameters.requiredDropCapabilities[_]}
+        dropped := {c | c := container.securityContext.capabilities.drop[_]}
+        count(must_drop - dropped) > 0
+      }
+
+      get_default(obj, param, _default) = out {
+        out = obj[param]
+      }
+
+      get_default(obj, param, _default) = out {
+        not obj[param]
+        not obj[param] == false
+        out = _default
+      }
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: a60a69f7-302f-47d2-b7fe-1d6ee0d01975
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: a60a69f7-302f-47d2-b7fe-1d6ee0d01975
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: a60a69f7-302f-47d2-b7fe-1d6ee0d01975
+  created: true

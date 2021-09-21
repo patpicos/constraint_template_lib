@@ -1,0 +1,159 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: Controls the allowed `procMount` types for the container. Introduced
+      in ACM v1.1.0.
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Controls the allowed `procMount` types for the container. Introduced in ACM v1.1.0."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"k8spspprocmount","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"K8sPSPProcMount"},"validation":{"openAPIV3Schema":{"properties":{"procMount":{"type":"string"}}}}}},"targets":[{"rego":"package k8spspprocmount\n\nviolation[{\"msg\": msg, \"details\": {}}] {\n    c := input_containers[_]\n    allowedProcMount := get_allowed_proc_mount(input)\n    not input_proc_mount_type_allowed(allowedProcMount, c)\n    msg := sprintf(\"ProcMount type is not allowed, container: %v. Allowed procMount types: %v\", [c.name, allowedProcMount])\n}\n\ninput_proc_mount_type_allowed(allowedProcMount, c) {\n    allowedProcMount == \"default\"\n    lower(c.securityContext.procMount) == \"default\"\n}\ninput_proc_mount_type_allowed(allowedProcMount, c) {\n    allowedProcMount == \"unmasked\"\n}\n\ninput_containers[c] {\n    c := input.review.object.spec.containers[_]\n    c.securityContext.procMount\n}\ninput_containers[c] {\n    c := input.review.object.spec.initContainers[_]\n    c.securityContext.procMount\n}\n\nget_allowed_proc_mount(arg) = out {\n    not arg.parameters\n    out = \"default\"\n}\nget_allowed_proc_mount(arg) = out {\n    not arg.parameters.procMount\n    out = \"default\"\n}\nget_allowed_proc_mount(arg) = out {\n    not valid_proc_mount(arg.parameters.procMount)\n    out = \"default\"\n}\nget_allowed_proc_mount(arg) = out {\n    out = lower(arg.parameters.procMount)\n}\n\nvalid_proc_mount(str) {\n    lower(str) == \"default\"\n}\nvalid_proc_mount(str) {\n    lower(str) == \"unmasked\"\n}\n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:22Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+              f:openAPIV3Schema:
+                .: {}
+                f:properties: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:22Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:17:05Z"
+  name: k8spspprocmount
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283363"
+  uid: 7be5bcb0-0389-4cb3-933b-b310cea185f0
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sPSPProcMount
+      validation:
+        legacySchema: true
+        openAPIV3Schema:
+          properties:
+            procMount:
+              type: string
+  targets:
+  - rego: |
+      package k8spspprocmount
+
+      violation[{"msg": msg, "details": {}}] {
+          c := input_containers[_]
+          allowedProcMount := get_allowed_proc_mount(input)
+          not input_proc_mount_type_allowed(allowedProcMount, c)
+          msg := sprintf("ProcMount type is not allowed, container: %v. Allowed procMount types: %v", [c.name, allowedProcMount])
+      }
+
+      input_proc_mount_type_allowed(allowedProcMount, c) {
+          allowedProcMount == "default"
+          lower(c.securityContext.procMount) == "default"
+      }
+      input_proc_mount_type_allowed(allowedProcMount, c) {
+          allowedProcMount == "unmasked"
+      }
+
+      input_containers[c] {
+          c := input.review.object.spec.containers[_]
+          c.securityContext.procMount
+      }
+      input_containers[c] {
+          c := input.review.object.spec.initContainers[_]
+          c.securityContext.procMount
+      }
+
+      get_allowed_proc_mount(arg) = out {
+          not arg.parameters
+          out = "default"
+      }
+      get_allowed_proc_mount(arg) = out {
+          not arg.parameters.procMount
+          out = "default"
+      }
+      get_allowed_proc_mount(arg) = out {
+          not valid_proc_mount(arg.parameters.procMount)
+          out = "default"
+      }
+      get_allowed_proc_mount(arg) = out {
+          out = lower(arg.parameters.procMount)
+      }
+
+      valid_proc_mount(str) {
+          lower(str) == "default"
+      }
+      valid_proc_mount(str) {
+          lower(str) == "unmasked"
+      }
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: 7be5bcb0-0389-4cb3-933b-b310cea185f0
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: 7be5bcb0-0389-4cb3-933b-b310cea185f0
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: 7be5bcb0-0389-4cb3-933b-b310cea185f0
+  created: true

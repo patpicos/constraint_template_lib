@@ -1,0 +1,166 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: Controls allocating an FSGroup that owns the Pod's volumes. Introduced
+      in ACM v1.1.0.
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Controls allocating an FSGroup that owns the Pod's volumes. Introduced in ACM v1.1.0."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"k8spspfsgroup","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"K8sPSPFSGroup"},"validation":{"openAPIV3Schema":{"properties":{"ranges":{"items":{"properties":{"max":{"type":"integer"},"min":{"type":"integer"}},"type":"object"},"type":"array"},"rule":{"type":"string"}}}}}},"targets":[{"rego":"package k8spspfsgroup\n\nviolation[{\"msg\": msg, \"details\": {}}] {\n  spec := input.review.object.spec\n  not input_fsGroup_allowed(spec)\n  msg := sprintf(\"The provided pod spec fsGroup is not allowed, pod: %v. Allowed fsGroup: %v\", [input.review.object.metadata.name, input.parameters])\n}\n\ninput_fsGroup_allowed(spec) {\n  # RunAsAny - No range is required. Allows any fsGroup ID to be specified.\n  input.parameters.rule == \"RunAsAny\"\n}\ninput_fsGroup_allowed(spec) {\n  # MustRunAs - Validates pod spec fsgroup against all ranges\n  input.parameters.rule == \"MustRunAs\"\n  fg := spec.securityContext.fsGroup\n  count(input.parameters.ranges) \u003e 0\n  range := input.parameters.ranges[_]\n  value_within_range(range, fg)\n}\ninput_fsGroup_allowed(spec) {\n    # MayRunAs - Validates pod spec fsgroup against all ranges or allow pod spec fsgroup to be left unset\n    input.parameters.rule == \"MayRunAs\"\n    not has_field(spec, \"securityContext\")\n}\ninput_fsGroup_allowed(spec) {\n    # MayRunAs - Validates pod spec fsgroup against all ranges or allow pod spec fsgroup to be left unset\n    input.parameters.rule == \"MayRunAs\"\n    not spec.securityContext.fsGroup\n}\ninput_fsGroup_allowed(spec) {\n  # MayRunAs - Validates pod spec fsgroup against all ranges or allow pod spec fsgroup to be left unset\n  input.parameters.rule == \"MayRunAs\"\n  fg := spec.securityContext.fsGroup\n  count(input.parameters.ranges) \u003e 0\n  range := input.parameters.ranges[_]\n  value_within_range(range, fg)\n}\nvalue_within_range(range, value) {\n  range.min \u003c= value\n  range.max \u003e= value\n}\n# has_field returns whether an object has a field\nhas_field(object, field) = true {\n  object[field]\n}\n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:21Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+              f:openAPIV3Schema:
+                .: {}
+                f:properties: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:21Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:16:48Z"
+  name: k8spspfsgroup
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283391"
+  uid: ecd3ecef-f17b-48b6-b295-93e725967dd2
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sPSPFSGroup
+      validation:
+        legacySchema: true
+        openAPIV3Schema:
+          properties:
+            ranges:
+              items:
+                properties:
+                  max:
+                    type: integer
+                  min:
+                    type: integer
+                type: object
+              type: array
+            rule:
+              type: string
+  targets:
+  - rego: |
+      package k8spspfsgroup
+
+      violation[{"msg": msg, "details": {}}] {
+        spec := input.review.object.spec
+        not input_fsGroup_allowed(spec)
+        msg := sprintf("The provided pod spec fsGroup is not allowed, pod: %v. Allowed fsGroup: %v", [input.review.object.metadata.name, input.parameters])
+      }
+
+      input_fsGroup_allowed(spec) {
+        # RunAsAny - No range is required. Allows any fsGroup ID to be specified.
+        input.parameters.rule == "RunAsAny"
+      }
+      input_fsGroup_allowed(spec) {
+        # MustRunAs - Validates pod spec fsgroup against all ranges
+        input.parameters.rule == "MustRunAs"
+        fg := spec.securityContext.fsGroup
+        count(input.parameters.ranges) > 0
+        range := input.parameters.ranges[_]
+        value_within_range(range, fg)
+      }
+      input_fsGroup_allowed(spec) {
+          # MayRunAs - Validates pod spec fsgroup against all ranges or allow pod spec fsgroup to be left unset
+          input.parameters.rule == "MayRunAs"
+          not has_field(spec, "securityContext")
+      }
+      input_fsGroup_allowed(spec) {
+          # MayRunAs - Validates pod spec fsgroup against all ranges or allow pod spec fsgroup to be left unset
+          input.parameters.rule == "MayRunAs"
+          not spec.securityContext.fsGroup
+      }
+      input_fsGroup_allowed(spec) {
+        # MayRunAs - Validates pod spec fsgroup against all ranges or allow pod spec fsgroup to be left unset
+        input.parameters.rule == "MayRunAs"
+        fg := spec.securityContext.fsGroup
+        count(input.parameters.ranges) > 0
+        range := input.parameters.ranges[_]
+        value_within_range(range, fg)
+      }
+      value_within_range(range, value) {
+        range.min <= value
+        range.max >= value
+      }
+      # has_field returns whether an object has a field
+      has_field(object, field) = true {
+        object[field]
+      }
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: ecd3ecef-f17b-48b6-b295-93e725967dd2
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: ecd3ecef-f17b-48b6-b295-93e725967dd2
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: ecd3ecef-f17b-48b6-b295-93e725967dd2
+  created: true

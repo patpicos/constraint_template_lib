@@ -1,0 +1,203 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: Promotes Pod stability by requiring that all containers' requested
+      memory exactly equals the memory limit, so that Pods are never in a state where
+      memory usage exceeds the requested amount. Kubernetes can terminate Pods in
+      that state when memory is needed. Introduced in ACM v1.3.1.
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Promotes Pod stability by requiring that all containers' requested memory exactly equals the memory limit, so that Pods are never in a state where memory usage exceeds the requested amount. Kubernetes can terminate Pods in that state when memory is needed. Introduced in ACM v1.3.1."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"k8smemoryrequestequalslimit","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"K8sMemoryRequestEqualsLimit"},"validation":{"openAPIV3Schema":{}}}},"targets":[{"rego":"package k8smemoryrequestequalslimit\n\nmissing_or_empty(obj, field) {\n  not obj[field]\n}\n\nmissing_or_empty(obj, field) {\n  obj[field] == \"\"\n}\n\nmissing_or_empty(obj, field) {\n  obj[field] == {}\n}\n\nviolation[{\"msg\": msg}] {\n  input.review.kind.group == \"\"\n  input.review.kind.kind == \"Pod\"\n  field_violation[{\"field\": \"containers\", \"msg\": msg}]\n}\n\nviolation[{\"msg\": msg}] {\n  input.review.kind.group == \"\"\n  input.review.kind.kind == \"Pod\"\n  field_violation[{\"field\": \"initContainers\", \"msg\": msg}]\n}\n\nfield_violation[{\"msg\": msg, \"field\": field}] {\n  container := input.review.object.spec[field][_]\n  missing_or_empty(container.resources.requests, \"memory\")\n  msg := sprintf(\"container \u003c%v\u003e must have a memory request\", [container.name])\n}\n\nfield_violation[{\"msg\": msg, \"field\": field}] {\n  container := input.review.object.spec[field][_]\n  missing_or_empty(container, \"resources\")\n  msg := sprintf(\"container \u003c%v\u003e has no resources\", [container.name])\n}\n\nfield_violation[{\"msg\": msg, \"field\": field}] {\n  container := input.review.object.spec[field][_]\n  missing_or_empty(container.resources, \"limits\")\n  msg := sprintf(\"container \u003c%v\u003e has no resource limits\", [container.name])\n}\n\nfield_violation[{\"msg\": msg, \"field\": field}] {\n  container := input.review.object.spec[field][_]\n  missing_or_empty(container.resources, \"requests\")\n  msg := sprintf(\"container \u003c%v\u003e has no resource requests\", [container.name])\n}\n\nfield_violation[{\"msg\": msg, \"field\": field}] {\n  container := input.review.object.spec[field][_]\n  missing_or_empty(container.resources.limits, \"memory\")\n  msg := sprintf(\"container \u003c%v\u003e has no memory limit\", [container.name])\n}\n\nfield_violation[{\"msg\": msg, \"field\": field}] {\n  container := input.review.object.spec[field][_]\n  mem_lim := canonify_bytes(container.resources.limits.memory)\n  mem_req := canonify_bytes(container.resources.requests.memory)\n  mem_req != mem_lim\n  msg := sprintf(\"Container \u003c%v\u003e memory request \u003c%v\u003e must exactly equal limit \u003c%v\u003e\", [container.name, container.resources.requests.memory, container.resources.limits.memory])\n}\n\nfield_violation[{\"msg\": msg, \"field\": field}] {\n  container := input.review.object.spec[field][_]\n  not is_number_or_e_notation(container.resources.limits.memory)\n  not is_number_with_suffix(container.resources.limits.memory)\n  msg := sprintf(\"Container \u003c%v\u003e memory limit \u003c%v\u003e could not be parsed as bytes\", [container.name, container.resources.limits.memory])\n}\n\nfield_violation[{\"msg\": msg, \"field\": field}] {\n  container := input.review.object.spec[field][_]\n  not is_number_or_e_notation(container.resources.requests.memory)\n  not is_number_with_suffix(container.resources.requests.memory)\n  msg := sprintf(\"Container \u003c%v\u003e memory request \u003c%v\u003e could not be parsed as bytes\", [container.name, container.resources.requests.memory])\n}\n\nis_number_or_e_notation(n) {\n  re_match(\"^[0-9]*(\\\\.?[0-9]+)?(e[-+]?[0-9]+)?$\", sprintf(\"%v\", [n]))\n}\n\nis_number_with_suffix(n) {\n  re_match(\"^[0-9]+(\\\\.[0-9]+)?[EePpTtGgMmKk]i?$\", sprintf(\"%v\", [n]))\n}\n\ncanonify_bytes(n) = n_bytes {\n  is_number_or_e_notation(n)\n  n_bytes := to_number(n)\n}\n\ncanonify_bytes(n) = n_bytes {\n  is_number_with_suffix(n)\n  n_bytes := units.parse_bytes(sprintf(\"%vB\", [n]))\n}\n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:21Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+              f:openAPIV3Schema: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:21Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:16:23Z"
+  name: k8smemoryrequestequalslimit
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283417"
+  uid: fe7f0cf5-8ae2-4ad2-91d7-080e32f4a46a
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sMemoryRequestEqualsLimit
+      validation:
+        legacySchema: true
+        openAPIV3Schema: {}
+  targets:
+  - rego: |
+      package k8smemoryrequestequalslimit
+
+      missing_or_empty(obj, field) {
+        not obj[field]
+      }
+
+      missing_or_empty(obj, field) {
+        obj[field] == ""
+      }
+
+      missing_or_empty(obj, field) {
+        obj[field] == {}
+      }
+
+      violation[{"msg": msg}] {
+        input.review.kind.group == ""
+        input.review.kind.kind == "Pod"
+        field_violation[{"field": "containers", "msg": msg}]
+      }
+
+      violation[{"msg": msg}] {
+        input.review.kind.group == ""
+        input.review.kind.kind == "Pod"
+        field_violation[{"field": "initContainers", "msg": msg}]
+      }
+
+      field_violation[{"msg": msg, "field": field}] {
+        container := input.review.object.spec[field][_]
+        missing_or_empty(container.resources.requests, "memory")
+        msg := sprintf("container <%v> must have a memory request", [container.name])
+      }
+
+      field_violation[{"msg": msg, "field": field}] {
+        container := input.review.object.spec[field][_]
+        missing_or_empty(container, "resources")
+        msg := sprintf("container <%v> has no resources", [container.name])
+      }
+
+      field_violation[{"msg": msg, "field": field}] {
+        container := input.review.object.spec[field][_]
+        missing_or_empty(container.resources, "limits")
+        msg := sprintf("container <%v> has no resource limits", [container.name])
+      }
+
+      field_violation[{"msg": msg, "field": field}] {
+        container := input.review.object.spec[field][_]
+        missing_or_empty(container.resources, "requests")
+        msg := sprintf("container <%v> has no resource requests", [container.name])
+      }
+
+      field_violation[{"msg": msg, "field": field}] {
+        container := input.review.object.spec[field][_]
+        missing_or_empty(container.resources.limits, "memory")
+        msg := sprintf("container <%v> has no memory limit", [container.name])
+      }
+
+      field_violation[{"msg": msg, "field": field}] {
+        container := input.review.object.spec[field][_]
+        mem_lim := canonify_bytes(container.resources.limits.memory)
+        mem_req := canonify_bytes(container.resources.requests.memory)
+        mem_req != mem_lim
+        msg := sprintf("Container <%v> memory request <%v> must exactly equal limit <%v>", [container.name, container.resources.requests.memory, container.resources.limits.memory])
+      }
+
+      field_violation[{"msg": msg, "field": field}] {
+        container := input.review.object.spec[field][_]
+        not is_number_or_e_notation(container.resources.limits.memory)
+        not is_number_with_suffix(container.resources.limits.memory)
+        msg := sprintf("Container <%v> memory limit <%v> could not be parsed as bytes", [container.name, container.resources.limits.memory])
+      }
+
+      field_violation[{"msg": msg, "field": field}] {
+        container := input.review.object.spec[field][_]
+        not is_number_or_e_notation(container.resources.requests.memory)
+        not is_number_with_suffix(container.resources.requests.memory)
+        msg := sprintf("Container <%v> memory request <%v> could not be parsed as bytes", [container.name, container.resources.requests.memory])
+      }
+
+      is_number_or_e_notation(n) {
+        re_match("^[0-9]*(\\.?[0-9]+)?(e[-+]?[0-9]+)?$", sprintf("%v", [n]))
+      }
+
+      is_number_with_suffix(n) {
+        re_match("^[0-9]+(\\.[0-9]+)?[EePpTtGgMmKk]i?$", sprintf("%v", [n]))
+      }
+
+      canonify_bytes(n) = n_bytes {
+        is_number_or_e_notation(n)
+        n_bytes := to_number(n)
+      }
+
+      canonify_bytes(n) = n_bytes {
+        is_number_with_suffix(n)
+        n_bytes := units.parse_bytes(sprintf("%vB", [n]))
+      }
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: fe7f0cf5-8ae2-4ad2-91d7-080e32f4a46a
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: fe7f0cf5-8ae2-4ad2-91d7-080e32f4a46a
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: fe7f0cf5-8ae2-4ad2-91d7-080e32f4a46a
+  created: true

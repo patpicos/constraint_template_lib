@@ -1,0 +1,146 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: Restricts ClusterRoleBindings and RoleBindings from referencing a
+      Role or ClusterRole specified in the constraints. Exceptions can be listed as
+      allowedSubjects in the constraint. Introduced in ACM v1.5.2.
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Restricts ClusterRoleBindings and RoleBindings from referencing a Role or ClusterRole specified in the constraints. Exceptions can be listed as allowedSubjects in the constraint. Introduced in ACM v1.5.2."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"k8srestrictrolebindings","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"K8sRestrictRoleBindings"},"validation":{"openAPIV3Schema":{"properties":{"allowedSubjects":{"items":{"properties":{"apiGroup":{"type":"string"},"kind":{"type":"string"},"name":{"type":"string"}},"type":"object"},"type":"array"},"restrictedRole":{"properties":{"apiGroup":{"type":"string"},"kind":{"type":"string"},"name":{"type":"string"}},"type":"object"}}}}}},"targets":[{"rego":"package k8srestrictrolebindings\n\nviolation[{\"msg\": msg}] {\n  is_rolebinding_or_cluster_rolebinding(input.review.kind)\n  input.review.object.roleRef.apiGroup == input.parameters.restrictedRole.apiGroup\n  input.review.object.roleRef.kind == input.parameters.restrictedRole.kind\n  input.review.object.roleRef.name == input.parameters.restrictedRole.name\n  has_not_allowed_subject(input.review.object.subjects, input.parameters)\n  msg := sprintf(\"%v is restricted from referencing %v %v\", [input.review.kind.kind, input.parameters.restrictedRole.kind, input.parameters.restrictedRole.name])\n}\n\nis_rolebinding_or_cluster_rolebinding(kind) {\n  kind.group == \"rbac.authorization.k8s.io\"\n  kinds := {\"RoleBinding\", \"ClusterRoleBinding\"}\n  kinds[kind.kind]\n}\n\nhas_not_allowed_subject(subjects, parameters) {\n  subject := subjects[_]\n  not subject_is_allowed(subject, parameters.allowedSubjects)\n}\n\nsubject_is_allowed(subject, allowedSubjects) {\n  allowedSubject := allowedSubjects[_]\n  subject.name == allowedSubject.name\n  subject.kind == allowedSubject.kind\n  api_group_is_equal(subject, allowedSubject)\n}\n\napi_group_is_equal(subject, allowedSubjects) {\n  has_empty_or_undefined_api_group(subject)\n  has_empty_or_undefined_api_group(allowedSubjects)\n}\n\napi_group_is_equal(subject, allowedSubject) {\n subject.apiGroup == allowedSubject.apiGroup\n}\n\nhas_empty_or_undefined_api_group(subject) {\n  not subject.apiGroup\n}\n      \nhas_empty_or_undefined_api_group(subject) {\n subject.apiGroup == \"\"\n} \n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:23Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+              f:openAPIV3Schema:
+                .: {}
+                f:properties: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:23Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:17:12Z"
+  name: k8srestrictrolebindings
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283451"
+  uid: 29fb013d-f354-4b56-a43a-8a4f6a6858cb
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sRestrictRoleBindings
+      validation:
+        legacySchema: true
+        openAPIV3Schema:
+          properties:
+            allowedSubjects:
+              items:
+                properties:
+                  apiGroup:
+                    type: string
+                  kind:
+                    type: string
+                  name:
+                    type: string
+                type: object
+              type: array
+            restrictedRole:
+              properties:
+                apiGroup:
+                  type: string
+                kind:
+                  type: string
+                name:
+                  type: string
+              type: object
+  targets:
+  - rego: "package k8srestrictrolebindings\n\nviolation[{\"msg\": msg}] {\n  is_rolebinding_or_cluster_rolebinding(input.review.kind)\n
+      \ input.review.object.roleRef.apiGroup == input.parameters.restrictedRole.apiGroup\n
+      \ input.review.object.roleRef.kind == input.parameters.restrictedRole.kind\n
+      \ input.review.object.roleRef.name == input.parameters.restrictedRole.name\n
+      \ has_not_allowed_subject(input.review.object.subjects, input.parameters)\n
+      \ msg := sprintf(\"%v is restricted from referencing %v %v\", [input.review.kind.kind,
+      input.parameters.restrictedRole.kind, input.parameters.restrictedRole.name])\n}\n\nis_rolebinding_or_cluster_rolebinding(kind)
+      {\n  kind.group == \"rbac.authorization.k8s.io\"\n  kinds := {\"RoleBinding\",
+      \"ClusterRoleBinding\"}\n  kinds[kind.kind]\n}\n\nhas_not_allowed_subject(subjects,
+      parameters) {\n  subject := subjects[_]\n  not subject_is_allowed(subject, parameters.allowedSubjects)\n}\n\nsubject_is_allowed(subject,
+      allowedSubjects) {\n  allowedSubject := allowedSubjects[_]\n  subject.name ==
+      allowedSubject.name\n  subject.kind == allowedSubject.kind\n  api_group_is_equal(subject,
+      allowedSubject)\n}\n\napi_group_is_equal(subject, allowedSubjects) {\n  has_empty_or_undefined_api_group(subject)\n
+      \ has_empty_or_undefined_api_group(allowedSubjects)\n}\n\napi_group_is_equal(subject,
+      allowedSubject) {\n subject.apiGroup == allowedSubject.apiGroup\n}\n\nhas_empty_or_undefined_api_group(subject)
+      {\n  not subject.apiGroup\n}\n      \nhas_empty_or_undefined_api_group(subject)
+      {\n subject.apiGroup == \"\"\n} \n"
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: 29fb013d-f354-4b56-a43a-8a4f6a6858cb
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: 29fb013d-f354-4b56-a43a-8a4f6a6858cb
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: 29fb013d-f354-4b56-a43a-8a4f6a6858cb
+  created: true

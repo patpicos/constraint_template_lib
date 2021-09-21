@@ -1,0 +1,151 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: Controls the seccomp profile used by containers. Introduced in ACM
+      v1.3.0.
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Controls the seccomp profile used by containers. Introduced in ACM v1.3.0."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"k8spspseccomp","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"K8sPSPSeccomp"},"validation":{"openAPIV3Schema":{"properties":{"allowedProfiles":{"items":{"type":"string"},"type":"array"}}}}}},"targets":[{"rego":"package k8spspseccomp\n\nviolation[{\"msg\": msg, \"details\": {}}] {\n    metadata := input.review.object.metadata\n    not input_wildcard_allowed(metadata)\n    container := input_containers[_]\n    not input_container_allowed(metadata, container)\n    msg := sprintf(\"Seccomp profile is not allowed, pod: %v, container: %v, Allowed profiles: %v\", [metadata.name, container.name, input.parameters.allowedProfiles])\n}\n\ninput_wildcard_allowed(metadata) {\n    input.parameters.allowedProfiles[_] == \"*\"\n}\n\ninput_container_allowed(metadata, container) {\n    not get_container_profile(metadata, container)\n    metadata.annotations[\"seccomp.security.alpha.kubernetes.io/pod\"] == input.parameters.allowedProfiles[_]\n}\n\ninput_container_allowed(metadata, container) {\n  profile := get_container_profile(metadata, container)\n  profile == input.parameters.allowedProfiles[_]\n}\n\nget_container_profile(metadata, container) = profile {\n  value := metadata.annotations[key]\n    startswith(key, \"container.seccomp.security.alpha.kubernetes.io/\")\n    [prefix, name] := split(key, \"/\")\n    name == container.name\n    profile = value\n}\n\ninput_containers[c] {\n    c := input.review.object.spec.containers[_]\n}\ninput_containers[c] {\n    c := input.review.object.spec.initContainers[_]\n}\n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:22Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+              f:openAPIV3Schema:
+                .: {}
+                f:properties: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:22Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:16:52Z"
+  name: k8spspseccomp
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283496"
+  uid: a743e358-8da3-40b7-a352-bb155582d21f
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sPSPSeccomp
+      validation:
+        legacySchema: true
+        openAPIV3Schema:
+          properties:
+            allowedProfiles:
+              items:
+                type: string
+              type: array
+  targets:
+  - rego: |
+      package k8spspseccomp
+
+      violation[{"msg": msg, "details": {}}] {
+          metadata := input.review.object.metadata
+          not input_wildcard_allowed(metadata)
+          container := input_containers[_]
+          not input_container_allowed(metadata, container)
+          msg := sprintf("Seccomp profile is not allowed, pod: %v, container: %v, Allowed profiles: %v", [metadata.name, container.name, input.parameters.allowedProfiles])
+      }
+
+      input_wildcard_allowed(metadata) {
+          input.parameters.allowedProfiles[_] == "*"
+      }
+
+      input_container_allowed(metadata, container) {
+          not get_container_profile(metadata, container)
+          metadata.annotations["seccomp.security.alpha.kubernetes.io/pod"] == input.parameters.allowedProfiles[_]
+      }
+
+      input_container_allowed(metadata, container) {
+        profile := get_container_profile(metadata, container)
+        profile == input.parameters.allowedProfiles[_]
+      }
+
+      get_container_profile(metadata, container) = profile {
+        value := metadata.annotations[key]
+          startswith(key, "container.seccomp.security.alpha.kubernetes.io/")
+          [prefix, name] := split(key, "/")
+          name == container.name
+          profile = value
+      }
+
+      input_containers[c] {
+          c := input.review.object.spec.containers[_]
+      }
+      input_containers[c] {
+          c := input.review.object.spec.initContainers[_]
+      }
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: a743e358-8da3-40b7-a352-bb155582d21f
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: a743e358-8da3-40b7-a352-bb155582d21f
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: a743e358-8da3-40b7-a352-bb155582d21f
+  created: true

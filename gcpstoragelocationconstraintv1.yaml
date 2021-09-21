@@ -1,0 +1,147 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: Restricts the permitted `locations` for StorageBucket Config Connector
+      resources. Bucket names in the `exemptions` list are exempt. Introduced in ACM
+      v1.6.1.
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Restricts the permitted `locations` for StorageBucket Config Connector resources. Bucket names in the `exemptions` list are exempt. Introduced in ACM v1.6.1."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"gcpstoragelocationconstraintv1","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"GCPStorageLocationConstraintV1"},"validation":{"openAPIV3Schema":{"properties":{"exemptions":{"items":{"type":"string"},"type":"array"},"locations":{"items":{"type":"string"},"type":"array"}}}}}},"targets":[{"rego":"package gcpstoragelocationconstraintv1\n\nallowedLocation(reviewLocation) {\n  locations := input.parameters.locations\n  satisfied := [good |\n    location = locations[_]\n    good = lower(location) == lower(reviewLocation)\n  ]\n\n  any(satisfied)\n}\n\nexempt(reviewName) {\n  input.parameters.exemptions[_] == reviewName\n}\n\nviolation[{\"msg\": msg}] {\n  bucketName := input.review.object.metadata.name\n  bucketLocation := input.review.object.spec.location\n  not allowedLocation(bucketLocation)\n  not exempt(bucketName)\n  msg := sprintf(\"Cloud Storage bucket \u003c%v\u003e uses a disallowed location \u003c%v\u003e, allowed locations are %v\", [bucketName, bucketLocation, input.parameters.locations])\n}\n\nviolation[{\"msg\": msg}] {\n  not input.parameters.locations\n  bucketName := input.review.object.metadata.name\n  msg := sprintf(\"No permitted locations for Cloud Storage bucket \u003c%v\u003e\", [bucketName])\n}\n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:20Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+              f:openAPIV3Schema:
+                .: {}
+                f:properties: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:20Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:15:45Z"
+  name: gcpstoragelocationconstraintv1
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283446"
+  uid: dbfbf0b9-5644-4532-bc0a-7b4a032bd597
+spec:
+  crd:
+    spec:
+      names:
+        kind: GCPStorageLocationConstraintV1
+      validation:
+        legacySchema: true
+        openAPIV3Schema:
+          properties:
+            exemptions:
+              items:
+                type: string
+              type: array
+            locations:
+              items:
+                type: string
+              type: array
+  targets:
+  - rego: |
+      package gcpstoragelocationconstraintv1
+
+      allowedLocation(reviewLocation) {
+        locations := input.parameters.locations
+        satisfied := [good |
+          location = locations[_]
+          good = lower(location) == lower(reviewLocation)
+        ]
+
+        any(satisfied)
+      }
+
+      exempt(reviewName) {
+        input.parameters.exemptions[_] == reviewName
+      }
+
+      violation[{"msg": msg}] {
+        bucketName := input.review.object.metadata.name
+        bucketLocation := input.review.object.spec.location
+        not allowedLocation(bucketLocation)
+        not exempt(bucketName)
+        msg := sprintf("Cloud Storage bucket <%v> uses a disallowed location <%v>, allowed locations are %v", [bucketName, bucketLocation, input.parameters.locations])
+      }
+
+      violation[{"msg": msg}] {
+        not input.parameters.locations
+        bucketName := input.review.object.metadata.name
+        msg := sprintf("No permitted locations for Cloud Storage bucket <%v>", [bucketName])
+      }
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: dbfbf0b9-5644-4532-bc0a-7b4a032bd597
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: dbfbf0b9-5644-4532-bc0a-7b4a032bd597
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: dbfbf0b9-5644-4532-bc0a-7b4a032bd597
+  created: true

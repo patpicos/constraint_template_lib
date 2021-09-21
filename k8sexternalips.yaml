@@ -1,0 +1,124 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: Restricts Services from containing externalIPs except those in a
+      provided allowlist.
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Restricts Services from containing externalIPs except those in a provided allowlist."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"k8sexternalips","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"K8sExternalIPs"},"validation":{"openAPIV3Schema":{"properties":{"allowedIPs":{"items":{"type":"string"},"type":"array"}}}}}},"targets":[{"rego":"package k8sexternalips\n\nviolation[{\"msg\": msg}] {\n  input.review.kind.kind == \"Service\"\n  input.review.kind.group == \"\"\n  allowedIPs := {ip | ip := input.parameters.allowedIPs[_]}\n  externalIPs := {ip | ip := input.review.object.spec.externalIPs[_]}\n  forbiddenIPs := externalIPs - allowedIPs\n  count(forbiddenIPs) \u003e 0\n  msg := sprintf(\"service has forbidden external IPs: %v\", [forbiddenIPs])\n}\n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:21Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+              f:openAPIV3Schema:
+                .: {}
+                f:properties: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:21Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:16:20Z"
+  name: k8sexternalips
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283487"
+  uid: a906cb7d-04b7-4ed6-b87a-00bbb3f33cad
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sExternalIPs
+      validation:
+        legacySchema: true
+        openAPIV3Schema:
+          properties:
+            allowedIPs:
+              items:
+                type: string
+              type: array
+  targets:
+  - rego: |
+      package k8sexternalips
+
+      violation[{"msg": msg}] {
+        input.review.kind.kind == "Service"
+        input.review.kind.group == ""
+        allowedIPs := {ip | ip := input.parameters.allowedIPs[_]}
+        externalIPs := {ip | ip := input.review.object.spec.externalIPs[_]}
+        forbiddenIPs := externalIPs - allowedIPs
+        count(forbiddenIPs) > 0
+        msg := sprintf("service has forbidden external IPs: %v", [forbiddenIPs])
+      }
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: a906cb7d-04b7-4ed6-b87a-00bbb3f33cad
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: a906cb7d-04b7-4ed6-b87a-00bbb3f33cad
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: a906cb7d-04b7-4ed6-b87a-00bbb3f33cad
+  created: true

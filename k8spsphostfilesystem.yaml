@@ -1,0 +1,199 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: Controls usage of the host filesystem. Introduced in ACM v1.1.0.
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Controls usage of the host filesystem. Introduced in ACM v1.1.0."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"k8spsphostfilesystem","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"K8sPSPHostFilesystem"},"validation":{"openAPIV3Schema":{"properties":{"allowedHostPaths":{"items":{"properties":{"pathPrefix":{"type":"string"},"readOnly":{"type":"boolean"}},"type":"object"},"type":"array"}}}}}},"targets":[{"rego":"package k8spsphostfilesystem\n\nviolation[{\"msg\": msg, \"details\": {}}] {\n    volume := input_hostpath_volumes[_]\n    allowedPaths := get_allowed_paths(input)\n    input_hostpath_violation(allowedPaths, volume)\n    msg := sprintf(\"HostPath volume %v is not allowed, pod: %v. Allowed path: %v\", [volume, input.review.object.metadata.name, allowedPaths])\n}\n\ninput_hostpath_violation(allowedPaths, volume) {\n    # An empty list means all host paths are blocked\n    allowedPaths == []\n}\ninput_hostpath_violation(allowedPaths, volume) {\n    not input_hostpath_allowed(allowedPaths, volume)\n}\n\nget_allowed_paths(arg) = out {\n    not arg.parameters\n    out = []\n}\nget_allowed_paths(arg) = out {\n    not arg.parameters.allowedHostPaths\n    out = []\n}\nget_allowed_paths(arg) = out {\n    out = arg.parameters.allowedHostPaths\n}\n\ninput_hostpath_allowed(allowedPaths, volume) {\n    allowedHostPath := allowedPaths[_]\n    path_matches(allowedHostPath.pathPrefix, volume.hostPath.path)\n    not allowedHostPath.readOnly == true\n}\n\ninput_hostpath_allowed(allowedPaths, volume) {\n    allowedHostPath := allowedPaths[_]\n    path_matches(allowedHostPath.pathPrefix, volume.hostPath.path)\n    allowedHostPath.readOnly\n    not writeable_input_volume_mounts(volume.name)\n}\n\nwriteable_input_volume_mounts(volume_name) {\n    container := input_containers[_]\n    mount := container.volumeMounts[_]\n    mount.name == volume_name\n    not mount.readOnly\n}\n\n# This allows \"/foo\", \"/foo/\", \"/foo/bar\" etc., but\n# disallows \"/fool\", \"/etc/foo\" etc.\npath_matches(prefix, path) {\n    a := split(trim(prefix, \"/\"), \"/\")\n    b := split(trim(path, \"/\"), \"/\")\n    prefix_matches(a, b)\n}\nprefix_matches(a, b) {\n    count(a) \u003c= count(b)\n    not any_not_equal_upto(a, b, count(a))\n}\n\nany_not_equal_upto(a, b, n) {\n    a[i] != b[i]\n    i \u003c n\n}\n\ninput_hostpath_volumes[v] {\n    v := input.review.object.spec.volumes[_]\n    has_field(v, \"hostPath\")\n}\n\n# has_field returns whether an object has a field\nhas_field(object, field) = true {\n    object[field]\n}\ninput_containers[c] {\n    c := input.review.object.spec.containers[_]\n}\n\ninput_containers[c] {\n    c := input.review.object.spec.initContainers[_]\n}\n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:21Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+              f:openAPIV3Schema:
+                .: {}
+                f:properties: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:21Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:16:52Z"
+  name: k8spsphostfilesystem
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283330"
+  uid: 2d07b3b4-8ca9-4538-8950-74c6c3ed2487
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sPSPHostFilesystem
+      validation:
+        legacySchema: true
+        openAPIV3Schema:
+          properties:
+            allowedHostPaths:
+              items:
+                properties:
+                  pathPrefix:
+                    type: string
+                  readOnly:
+                    type: boolean
+                type: object
+              type: array
+  targets:
+  - rego: |
+      package k8spsphostfilesystem
+
+      violation[{"msg": msg, "details": {}}] {
+          volume := input_hostpath_volumes[_]
+          allowedPaths := get_allowed_paths(input)
+          input_hostpath_violation(allowedPaths, volume)
+          msg := sprintf("HostPath volume %v is not allowed, pod: %v. Allowed path: %v", [volume, input.review.object.metadata.name, allowedPaths])
+      }
+
+      input_hostpath_violation(allowedPaths, volume) {
+          # An empty list means all host paths are blocked
+          allowedPaths == []
+      }
+      input_hostpath_violation(allowedPaths, volume) {
+          not input_hostpath_allowed(allowedPaths, volume)
+      }
+
+      get_allowed_paths(arg) = out {
+          not arg.parameters
+          out = []
+      }
+      get_allowed_paths(arg) = out {
+          not arg.parameters.allowedHostPaths
+          out = []
+      }
+      get_allowed_paths(arg) = out {
+          out = arg.parameters.allowedHostPaths
+      }
+
+      input_hostpath_allowed(allowedPaths, volume) {
+          allowedHostPath := allowedPaths[_]
+          path_matches(allowedHostPath.pathPrefix, volume.hostPath.path)
+          not allowedHostPath.readOnly == true
+      }
+
+      input_hostpath_allowed(allowedPaths, volume) {
+          allowedHostPath := allowedPaths[_]
+          path_matches(allowedHostPath.pathPrefix, volume.hostPath.path)
+          allowedHostPath.readOnly
+          not writeable_input_volume_mounts(volume.name)
+      }
+
+      writeable_input_volume_mounts(volume_name) {
+          container := input_containers[_]
+          mount := container.volumeMounts[_]
+          mount.name == volume_name
+          not mount.readOnly
+      }
+
+      # This allows "/foo", "/foo/", "/foo/bar" etc., but
+      # disallows "/fool", "/etc/foo" etc.
+      path_matches(prefix, path) {
+          a := split(trim(prefix, "/"), "/")
+          b := split(trim(path, "/"), "/")
+          prefix_matches(a, b)
+      }
+      prefix_matches(a, b) {
+          count(a) <= count(b)
+          not any_not_equal_upto(a, b, count(a))
+      }
+
+      any_not_equal_upto(a, b, n) {
+          a[i] != b[i]
+          i < n
+      }
+
+      input_hostpath_volumes[v] {
+          v := input.review.object.spec.volumes[_]
+          has_field(v, "hostPath")
+      }
+
+      # has_field returns whether an object has a field
+      has_field(object, field) = true {
+          object[field]
+      }
+      input_containers[c] {
+          c := input.review.object.spec.containers[_]
+      }
+
+      input_containers[c] {
+          c := input.review.object.spec.initContainers[_]
+      }
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: 2d07b3b4-8ca9-4538-8950-74c6c3ed2487
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: 2d07b3b4-8ca9-4538-8950-74c6c3ed2487
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: 2d07b3b4-8ca9-4538-8950-74c6c3ed2487
+  created: true

@@ -1,0 +1,129 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: Controls usage of volume types. Introduced in ACM v1.1.0.
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Controls usage of volume types. Introduced in ACM v1.1.0."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"k8spspvolumetypes","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"K8sPSPVolumeTypes"},"validation":{"openAPIV3Schema":{"properties":{"volumes":{"items":{"type":"string"},"type":"array"}}}}}},"targets":[{"rego":"package k8spspvolumetypes\n\nviolation[{\"msg\": msg, \"details\": {}}] {\n    volume_fields := {x | input.review.object.spec.volumes[_][x]; x != \"name\"}\n    field := volume_fields[_]\n    not input_volume_type_allowed(field)\n    msg := sprintf(\"The volume type %v is not allowed, pod: %v. Allowed volume types: %v\", [field, input.review.object.metadata.name, input.parameters.volumes])\n}\n\n# * may be used to allow all volume types\ninput_volume_type_allowed(field) {\n    input.parameters.volumes[_] == \"*\"\n}\n\ninput_volume_type_allowed(field) {\n    field == input.parameters.volumes[_]\n}\n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:22Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+              f:openAPIV3Schema:
+                .: {}
+                f:properties: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:22Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:17:04Z"
+  name: k8spspvolumetypes
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283421"
+  uid: e4ba25cd-00cc-4ab0-972b-4aca939f7c4c
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sPSPVolumeTypes
+      validation:
+        legacySchema: true
+        openAPIV3Schema:
+          properties:
+            volumes:
+              items:
+                type: string
+              type: array
+  targets:
+  - rego: |
+      package k8spspvolumetypes
+
+      violation[{"msg": msg, "details": {}}] {
+          volume_fields := {x | input.review.object.spec.volumes[_][x]; x != "name"}
+          field := volume_fields[_]
+          not input_volume_type_allowed(field)
+          msg := sprintf("The volume type %v is not allowed, pod: %v. Allowed volume types: %v", [field, input.review.object.metadata.name, input.parameters.volumes])
+      }
+
+      # * may be used to allow all volume types
+      input_volume_type_allowed(field) {
+          input.parameters.volumes[_] == "*"
+      }
+
+      input_volume_type_allowed(field) {
+          field == input.parameters.volumes[_]
+      }
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: e4ba25cd-00cc-4ab0-972b-4aca939f7c4c
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: e4ba25cd-00cc-4ab0-972b-4aca939f7c4c
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: e4ba25cd-00cc-4ab0-972b-4aca939f7c4c
+  created: true

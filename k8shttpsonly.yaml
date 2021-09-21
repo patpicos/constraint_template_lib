@@ -1,0 +1,119 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: Requires Ingress resources to be HTTPS only; TLS configuration should
+      be set and `kubernetes.io/ingress.allow-http` annotation equals false.
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Requires Ingress resources to be HTTPS only; TLS configuration should be set and `kubernetes.io/ingress.allow-http` annotation equals false."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"k8shttpsonly","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"K8sHttpsOnly"}}},"targets":[{"rego":"package k8shttpsonly\n\nviolation[{\"msg\": msg}] {\n  input.review.object.kind == \"Ingress\"\n  re_match(\"^(extensions|networking.k8s.io)/\", input.review.object.apiVersion)\n  ingress := input.review.object\n  not https_complete(ingress)\n  msg := sprintf(\"Ingress should be https. tls configuration and allow-http=false annotation are required for %v\", [ingress.metadata.name])\n}\n\nhttps_complete(ingress) {\n  ingress.spec.tls\n  count(ingress.spec.tls) \u003e 0\n  ingress.metadata.annotations[\"kubernetes.io/ingress.allow-http\"] == \"false\"\n}\n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:21Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:21Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:16:20Z"
+  name: k8shttpsonly
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283469"
+  uid: fb0dee9b-c008-4310-8438-7d64d57cfdfa
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sHttpsOnly
+      validation:
+        legacySchema: true
+  targets:
+  - rego: |
+      package k8shttpsonly
+
+      violation[{"msg": msg}] {
+        input.review.object.kind == "Ingress"
+        re_match("^(extensions|networking.k8s.io)/", input.review.object.apiVersion)
+        ingress := input.review.object
+        not https_complete(ingress)
+        msg := sprintf("Ingress should be https. tls configuration and allow-http=false annotation are required for %v", [ingress.metadata.name])
+      }
+
+      https_complete(ingress) {
+        ingress.spec.tls
+        count(ingress.spec.tls) > 0
+        ingress.metadata.annotations["kubernetes.io/ingress.allow-http"] == "false"
+      }
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: fb0dee9b-c008-4310-8438-7d64d57cfdfa
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: fb0dee9b-c008-4310-8438-7d64d57cfdfa
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: fb0dee9b-c008-4310-8438-7d64d57cfdfa
+  created: true

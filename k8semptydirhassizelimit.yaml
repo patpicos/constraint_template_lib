@@ -1,0 +1,184 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: Requires that any `emptyDir` volumes specify a `sizeLimit`; optionally,
+      a `maxSizeLimit` parameter can be supplied in the constraint to specify a maximum
+      allowable size limit. Introduced in ACM v1.3.1.
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Requires that any `emptyDir` volumes specify a `sizeLimit`; optionally, a `maxSizeLimit` parameter can be supplied in the constraint to specify a maximum allowable size limit. Introduced in ACM v1.3.1."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"k8semptydirhassizelimit","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"K8sEmptyDirHasSizeLimit"},"validation":{"openAPIV3Schema":{"properties":{"maxSizeLimit":{"type":"string"}}}}}},"targets":[{"rego":"package k8semptydirhassizelimit\n\nviolation[{\"msg\": msg}] {\n  input.review.kind.group == \"\"\n  input.review.kind.kind == \"Pod\"\n  volume := input.review.object.spec.volumes[i]\n  volume.emptyDir\n  not volume.emptyDir.sizeLimit\n  msg := sprintf(\"emptyDir volume \u003c%v\u003e must have a size limit\", [volume_identifier(volume, i)])\n}\n\nviolation[{\"msg\": msg}] {\n  input.review.kind.group == \"\"\n  input.review.kind.kind == \"Pod\"\n  volume := input.review.object.spec.volumes[i]\n  canonify_bytes(volume.emptyDir.sizeLimit) \u003e canonify_bytes(input.parameters.maxSizeLimit)\n  msg := sprintf(\"emptyDir volume \u003c%v\u003e size limit \u003c%v\u003e exceeds maximum \u003c%v\u003e\", [volume_identifier(volume, i), volume.emptyDir.sizeLimit, input.parameters.maxSizeLimit])\n}\n\nviolation[{\"msg\": msg}] {\n  input.review.kind.group == \"\"\n  input.review.kind.kind == \"Pod\"\n  volume := input.review.object.spec.volumes[i]\n  volume.emptyDir.sizeLimit\n  not is_number_or_e_notation(volume.emptyDir.sizeLimit)\n  not is_number_with_suffix(volume.emptyDir.sizeLimit)\n  msg := sprintf(\"emptyDir volume \u003c%v\u003e size limit \u003c%v\u003e could not be parsed as bytes\", [volume_identifier(volume, i), volume.emptyDir.sizeLimit])\n}\n\nviolation[{\"msg\": msg}] {\n  input.review.kind.group == \"\"\n  input.review.kind.kind == \"Pod\"\n  input.parameters.maxSizeLimit\n  not is_number_or_e_notation(input.parameters.maxSizeLimit)\n  not is_number_with_suffix(input.parameters.maxSizeLimit)\n  msg := sprintf(\"emptyDir volume max size limit \u003c%v\u003e could not be parsed as bytes\", [input.parameters.maxSizeLimit])\n}\n\nreadable_volume_name(name) {\n  name != false\n  name != null\n  name != \"\"\n  name\n}\n\nvolume_identifier(volume, i) = name {\n  readable_volume_name(volume.name)\n  name := volume.name\n}\n\nvolume_identifier(volume, i) = name {\n  not readable_volume_name(volume.name)\n  name := i\n}\n\nis_number_or_e_notation(n) {\n  re_match(\"^[0-9]*(\\\\.?[0-9]+)?(e[-+]?[0-9]+)?$\", sprintf(\"%v\", [n]))\n}\n\nis_number_with_suffix(n) {\n  re_match(\"^[0-9]+(\\\\.[0-9]+)?[EePpTtGgMmKk]i?$\", sprintf(\"%v\", [n]))\n}\n\ncanonify_bytes(n) = n_bytes {\n  is_number_or_e_notation(n)\n  n_bytes := to_number(n)\n}\n\ncanonify_bytes(n) = n_bytes {\n  is_number_with_suffix(n)\n  n_bytes := units.parse_bytes(sprintf(\"%vB\", [n]))\n}\n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:21Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+              f:openAPIV3Schema:
+                .: {}
+                f:properties: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:21Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:15:57Z"
+  name: k8semptydirhassizelimit
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283420"
+  uid: 7bab2527-5fdd-41c0-a238-63111410f8e8
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sEmptyDirHasSizeLimit
+      validation:
+        legacySchema: true
+        openAPIV3Schema:
+          properties:
+            maxSizeLimit:
+              type: string
+  targets:
+  - rego: |
+      package k8semptydirhassizelimit
+
+      violation[{"msg": msg}] {
+        input.review.kind.group == ""
+        input.review.kind.kind == "Pod"
+        volume := input.review.object.spec.volumes[i]
+        volume.emptyDir
+        not volume.emptyDir.sizeLimit
+        msg := sprintf("emptyDir volume <%v> must have a size limit", [volume_identifier(volume, i)])
+      }
+
+      violation[{"msg": msg}] {
+        input.review.kind.group == ""
+        input.review.kind.kind == "Pod"
+        volume := input.review.object.spec.volumes[i]
+        canonify_bytes(volume.emptyDir.sizeLimit) > canonify_bytes(input.parameters.maxSizeLimit)
+        msg := sprintf("emptyDir volume <%v> size limit <%v> exceeds maximum <%v>", [volume_identifier(volume, i), volume.emptyDir.sizeLimit, input.parameters.maxSizeLimit])
+      }
+
+      violation[{"msg": msg}] {
+        input.review.kind.group == ""
+        input.review.kind.kind == "Pod"
+        volume := input.review.object.spec.volumes[i]
+        volume.emptyDir.sizeLimit
+        not is_number_or_e_notation(volume.emptyDir.sizeLimit)
+        not is_number_with_suffix(volume.emptyDir.sizeLimit)
+        msg := sprintf("emptyDir volume <%v> size limit <%v> could not be parsed as bytes", [volume_identifier(volume, i), volume.emptyDir.sizeLimit])
+      }
+
+      violation[{"msg": msg}] {
+        input.review.kind.group == ""
+        input.review.kind.kind == "Pod"
+        input.parameters.maxSizeLimit
+        not is_number_or_e_notation(input.parameters.maxSizeLimit)
+        not is_number_with_suffix(input.parameters.maxSizeLimit)
+        msg := sprintf("emptyDir volume max size limit <%v> could not be parsed as bytes", [input.parameters.maxSizeLimit])
+      }
+
+      readable_volume_name(name) {
+        name != false
+        name != null
+        name != ""
+        name
+      }
+
+      volume_identifier(volume, i) = name {
+        readable_volume_name(volume.name)
+        name := volume.name
+      }
+
+      volume_identifier(volume, i) = name {
+        not readable_volume_name(volume.name)
+        name := i
+      }
+
+      is_number_or_e_notation(n) {
+        re_match("^[0-9]*(\\.?[0-9]+)?(e[-+]?[0-9]+)?$", sprintf("%v", [n]))
+      }
+
+      is_number_with_suffix(n) {
+        re_match("^[0-9]+(\\.[0-9]+)?[EePpTtGgMmKk]i?$", sprintf("%v", [n]))
+      }
+
+      canonify_bytes(n) = n_bytes {
+        is_number_or_e_notation(n)
+        n_bytes := to_number(n)
+      }
+
+      canonify_bytes(n) = n_bytes {
+        is_number_with_suffix(n)
+        n_bytes := units.parse_bytes(sprintf("%vB", [n]))
+      }
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: 7bab2527-5fdd-41c0-a238-63111410f8e8
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: 7bab2527-5fdd-41c0-a238-63111410f8e8
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: 7bab2527-5fdd-41c0-a238-63111410f8e8
+  created: true

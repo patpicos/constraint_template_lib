@@ -1,0 +1,143 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: Requires all Pods and containers to have a SecurityContext defined
+      at the Pod or container level. Introduced in ACM v1.5.2.
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Requires all Pods and containers to have a SecurityContext defined at the Pod or container level. Introduced in ACM v1.5.2."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"k8spodsrequiresecuritycontext","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"K8sPodsRequireSecurityContext"},"validation":{"openAPIV3Schema":{}}}},"targets":[{"rego":"package k8spodsrequiresecuritycontext\n\nviolation[{\"msg\": msg}] {\n  input.review.kind.kind == \"Pod\"\n  container := input.review.object.spec.containers[_]\n  has_empty_security_context(container)\n  has_empty_security_context(input.review.object.spec)\n  msg := \"securityContext must be defined for all Pod containers\"\n}\n\nviolation[{\"msg\": msg}] {\n  input.review.kind.kind == \"Pod\"\n  initContainer := input.review.object.spec.initContainers[_]\n  has_empty_security_context(initContainer)\n  has_empty_security_context(input.review.object.spec)\n  msg := \"securityContext must be defined for all Pod initContainers\"\n}\n\nviolation[{\"msg\": msg}] {\n  input.review.kind.kind == \"Pod\"\n  not input.review.object.spec.containers\n  not input.review.object.spec.initContainers\n  has_empty_security_context(input.review.object.spec)\n  msg := \"securityContext must be defined for Pod\"\n}\n\nhas_empty_security_context(spec) {\n  spec.securityContext == {}\n}\n\nhas_empty_security_context(spec) {\n  not spec.securityContext\n}\n\nhas_empty_security_context(spec) {\n  spec.securityContext == null\n}\n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:21Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+              f:openAPIV3Schema: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:21Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:16:23Z"
+  name: k8spodsrequiresecuritycontext
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283499"
+  uid: 8c23d604-10a3-46b6-afcc-d2c61303b9e1
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sPodsRequireSecurityContext
+      validation:
+        legacySchema: true
+        openAPIV3Schema: {}
+  targets:
+  - rego: |
+      package k8spodsrequiresecuritycontext
+
+      violation[{"msg": msg}] {
+        input.review.kind.kind == "Pod"
+        container := input.review.object.spec.containers[_]
+        has_empty_security_context(container)
+        has_empty_security_context(input.review.object.spec)
+        msg := "securityContext must be defined for all Pod containers"
+      }
+
+      violation[{"msg": msg}] {
+        input.review.kind.kind == "Pod"
+        initContainer := input.review.object.spec.initContainers[_]
+        has_empty_security_context(initContainer)
+        has_empty_security_context(input.review.object.spec)
+        msg := "securityContext must be defined for all Pod initContainers"
+      }
+
+      violation[{"msg": msg}] {
+        input.review.kind.kind == "Pod"
+        not input.review.object.spec.containers
+        not input.review.object.spec.initContainers
+        has_empty_security_context(input.review.object.spec)
+        msg := "securityContext must be defined for Pod"
+      }
+
+      has_empty_security_context(spec) {
+        spec.securityContext == {}
+      }
+
+      has_empty_security_context(spec) {
+        not spec.securityContext
+      }
+
+      has_empty_security_context(spec) {
+        spec.securityContext == null
+      }
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: 8c23d604-10a3-46b6-afcc-d2c61303b9e1
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: 8c23d604-10a3-46b6-afcc-d2c61303b9e1
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: 8c23d604-10a3-46b6-afcc-d2c61303b9e1
+  created: true

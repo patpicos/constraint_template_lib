@@ -1,0 +1,152 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: 'Prohibits the creation of Gateway, Ingress, and Service resources
+      that expose workloads to external IPs.<ul><li>Gateway: All resources of group
+      `networking.istio.io` are prohibited.</li><li>Ingress: All resources of group
+      `extensions` or `networking.k8s.io` are prohibited. </li><li>Service: All `LoadBalancer`
+      type resources must have `Internal` annotation; any `externalIPs` must belong
+      to the CIDRs specified by the `internalCIDRs` parameter.</li></ul> Introduced
+      in ACM v1.3.0.'
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Prohibits the creation of Gateway, Ingress, and Service resources that expose workloads to external IPs.\u003cul\u003e\u003cli\u003eGateway: All resources of group `networking.istio.io` are prohibited.\u003c/li\u003e\u003cli\u003eIngress: All resources of group `extensions` or `networking.k8s.io` are prohibited. \u003c/li\u003e\u003cli\u003eService: All `LoadBalancer` type resources must have `Internal` annotation; any `externalIPs` must belong to the CIDRs specified by the `internalCIDRs` parameter.\u003c/li\u003e\u003c/ul\u003e Introduced in ACM v1.3.0."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"k8snoexternalservices","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"K8sNoExternalServices"},"validation":{"openAPIV3Schema":{"properties":{"internalCIDRs":{"items":{"type":"string"},"type":"array"}}}}}},"targets":[{"rego":"package k8snoexternalservices\n\nviolation[{\"msg\": msg}] {\n  input.review.kind.kind == \"Ingress\"\n  re_match(\"^(extensions|networking.k8s.io)$\", input.review.kind.group)\n  msg := \"No external service exposure is allowed via ingress\"\n}\n\nviolation[{\"msg\": msg}] {\n  input.review.kind.kind == \"Gateway\"\n  input.review.kind.group == \"networking.istio.io\"\n  msg := \"Creation of networking.istio.io/Gateway resources is not allowed\"\n}\n\nviolation[{\"msg\": msg}] {\n  input.review.kind.kind == \"Service\"\n  input.review.kind.group == \"\"\n  input.review.object.spec.type == \"LoadBalancer\"\n  not input.review.object.metadata.annotations[\"cloud.google.com/load-balancer-type\"] == \"Internal\"\n  msg := \"Creating services of type `LoadBalancer` without Internal annotation is not allowed\"\n}\n\nviolation[{\"msg\": msg}] {\n  input.review.kind.kind == \"Service\"\n  input.review.kind.group == \"\"\n  ip := input.review.object.spec.externalIPs[_]\n  is_external_ip(ip)\n  msg := sprintf(\"Service has an external IP exposed: `%v`\", [ip])\n}\n\nis_external_ip(ip) {\n  cidr_membership := [i | cidr := input.parameters.internalCIDRs[_]; i := net.cidr_contains(cidr, ip)]\n  not any(cidr_membership)\n}\n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:21Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+              f:openAPIV3Schema:
+                .: {}
+                f:properties: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:21Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:16:23Z"
+  name: k8snoexternalservices
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283444"
+  uid: 4258af6b-b7ee-46bd-849d-f21047d13e36
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sNoExternalServices
+      validation:
+        legacySchema: true
+        openAPIV3Schema:
+          properties:
+            internalCIDRs:
+              items:
+                type: string
+              type: array
+  targets:
+  - rego: |
+      package k8snoexternalservices
+
+      violation[{"msg": msg}] {
+        input.review.kind.kind == "Ingress"
+        re_match("^(extensions|networking.k8s.io)$", input.review.kind.group)
+        msg := "No external service exposure is allowed via ingress"
+      }
+
+      violation[{"msg": msg}] {
+        input.review.kind.kind == "Gateway"
+        input.review.kind.group == "networking.istio.io"
+        msg := "Creation of networking.istio.io/Gateway resources is not allowed"
+      }
+
+      violation[{"msg": msg}] {
+        input.review.kind.kind == "Service"
+        input.review.kind.group == ""
+        input.review.object.spec.type == "LoadBalancer"
+        not input.review.object.metadata.annotations["cloud.google.com/load-balancer-type"] == "Internal"
+        msg := "Creating services of type `LoadBalancer` without Internal annotation is not allowed"
+      }
+
+      violation[{"msg": msg}] {
+        input.review.kind.kind == "Service"
+        input.review.kind.group == ""
+        ip := input.review.object.spec.externalIPs[_]
+        is_external_ip(ip)
+        msg := sprintf("Service has an external IP exposed: `%v`", [ip])
+      }
+
+      is_external_ip(ip) {
+        cidr_membership := [i | cidr := input.parameters.internalCIDRs[_]; i := net.cidr_contains(cidr, ip)]
+        not any(cidr_membership)
+      }
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: 4258af6b-b7ee-46bd-849d-f21047d13e36
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: 4258af6b-b7ee-46bd-849d-f21047d13e36
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: 4258af6b-b7ee-46bd-849d-f21047d13e36
+  created: true

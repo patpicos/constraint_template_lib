@@ -1,0 +1,128 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: Controls restricting escalation to root privileges. Introduced in
+      ACM v1.1.0.
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Controls restricting escalation to root privileges. Introduced in ACM v1.1.0."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"k8spspallowprivilegeescalationcontainer","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"K8sPSPAllowPrivilegeEscalationContainer"}}},"targets":[{"rego":"package k8spspallowprivilegeescalationcontainer\n\nviolation[{\"msg\": msg, \"details\": {}}] {\n    c := input_containers[_]\n    input_allow_privilege_escalation(c)\n    msg := sprintf(\"Privilege escalation container is not allowed: %v\", [c.name])\n}\n\ninput_allow_privilege_escalation(c) {\n    not has_field(c, \"securityContext\")\n}\ninput_allow_privilege_escalation(c) {\n    not c.securityContext.allowPrivilegeEscalation == false\n}\ninput_containers[c] {\n    c := input.review.object.spec.containers[_]\n}\ninput_containers[c] {\n    c := input.review.object.spec.initContainers[_]\n}\n# has_field returns whether an object has a field\nhas_field(object, field) = true {\n    object[field]\n}\n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:21Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:21Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:16:33Z"
+  name: k8spspallowprivilegeescalationcontainer
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283502"
+  uid: c5b9d9fd-7a9c-45d8-8479-a872ea9e4b40
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sPSPAllowPrivilegeEscalationContainer
+      validation:
+        legacySchema: true
+  targets:
+  - rego: |
+      package k8spspallowprivilegeescalationcontainer
+
+      violation[{"msg": msg, "details": {}}] {
+          c := input_containers[_]
+          input_allow_privilege_escalation(c)
+          msg := sprintf("Privilege escalation container is not allowed: %v", [c.name])
+      }
+
+      input_allow_privilege_escalation(c) {
+          not has_field(c, "securityContext")
+      }
+      input_allow_privilege_escalation(c) {
+          not c.securityContext.allowPrivilegeEscalation == false
+      }
+      input_containers[c] {
+          c := input.review.object.spec.containers[_]
+      }
+      input_containers[c] {
+          c := input.review.object.spec.initContainers[_]
+      }
+      # has_field returns whether an object has a field
+      has_field(object, field) = true {
+          object[field]
+      }
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: c5b9d9fd-7a9c-45d8-8479-a872ea9e4b40
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: c5b9d9fd-7a9c-45d8-8479-a872ea9e4b40
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: c5b9d9fd-7a9c-45d8-8479-a872ea9e4b40
+  created: true

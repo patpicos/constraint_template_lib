@@ -1,0 +1,139 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: Requires that Istio AuthorizationPolicy rules have source principals
+      set to something other than "*". Introduced in ACM v1.4.0.
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Requires that Istio AuthorizationPolicy rules have source principals set to something other than \"*\". Introduced in ACM v1.4.0."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"sourcenotallauthz","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"SourceNotAllAuthz"},"validation":{"openAPIV3Schema":{}}}},"targets":[{"rego":"package asm.guardrails.sourcenotallauthz\n\n# spec.rules[].from[].source.principal does not exist\nviolation[{\"msg\": msg}] {\n  p := input.review.object\n\n  p.apiVersion == \"security.istio.io/v1beta1\"\n  p.kind == \"AuthorizationPolicy\"\n\n  rule := p.spec.rules[_]\n\n  sources := {i | rule.from[_].source[i]}\n\n  not sources.principals\n\n  msg := \"source.principals does not exist\"\n}\n\n# spec.rules[].from[].source.principal is set to '*'\nviolation[{\"msg\": msg}] {\n  p := input.review.object\n\n  p.apiVersion == \"security.istio.io/v1beta1\"\n  p.kind == \"AuthorizationPolicy\"\n\n  rule := p.spec.rules[_]\n\n  principals := {v | v := rule.from[_].source.principals[_]}\n\n  principals[\"*\"]\n\n  msg := \"source.principals[] cannot be '*'\"\n}\n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:23Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+              f:openAPIV3Schema: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:23Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:16:55Z"
+  name: sourcenotallauthz
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283366"
+  uid: 6654bad1-860b-4234-aad2-30d99ea58bc4
+spec:
+  crd:
+    spec:
+      names:
+        kind: SourceNotAllAuthz
+      validation:
+        legacySchema: true
+        openAPIV3Schema: {}
+  targets:
+  - rego: |
+      package asm.guardrails.sourcenotallauthz
+
+      # spec.rules[].from[].source.principal does not exist
+      violation[{"msg": msg}] {
+        p := input.review.object
+
+        p.apiVersion == "security.istio.io/v1beta1"
+        p.kind == "AuthorizationPolicy"
+
+        rule := p.spec.rules[_]
+
+        sources := {i | rule.from[_].source[i]}
+
+        not sources.principals
+
+        msg := "source.principals does not exist"
+      }
+
+      # spec.rules[].from[].source.principal is set to '*'
+      violation[{"msg": msg}] {
+        p := input.review.object
+
+        p.apiVersion == "security.istio.io/v1beta1"
+        p.kind == "AuthorizationPolicy"
+
+        rule := p.spec.rules[_]
+
+        principals := {v | v := rule.from[_].source.principals[_]}
+
+        principals["*"]
+
+        msg := "source.principals[] cannot be '*'"
+      }
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: 6654bad1-860b-4234-aad2-30d99ea58bc4
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: 6654bad1-860b-4234-aad2-30d99ea58bc4
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: 6654bad1-860b-4234-aad2-30d99ea58bc4
+  created: true

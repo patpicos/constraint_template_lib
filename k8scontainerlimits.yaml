@@ -1,0 +1,303 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  annotations:
+    description: Requires containers to have memory and CPU limits set and within
+      a specified maximum amount.
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"templates.gatekeeper.sh/v1beta1","kind":"ConstraintTemplate","metadata":{"annotations":{"description":"Requires containers to have memory and CPU limits set and within a specified maximum amount."},"labels":{"configmanagement.gke.io/configmanagement":"config-management","k8s-app":"kubernetes-config-management","policycontroller.configmanagement.gke.io":"true"},"name":"k8scontainerlimits","ownerReferences":[{"apiVersion":"configmanagement.gke.io/v1","blockOwnerDeletion":true,"controller":true,"kind":"ConfigManagement","name":"config-management","uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}]},"spec":{"crd":{"spec":{"names":{"kind":"K8sContainerLimits"},"validation":{"openAPIV3Schema":{"properties":{"cpu":{"type":"string"},"memory":{"type":"string"}}}}}},"targets":[{"rego":"package k8scontainerlimits\n\nmissing(obj, field) {\n  not obj[field]\n}\n\nmissing(obj, field) {\n  obj[field] == \"\"\n}\n\ncanonify_cpu(orig) = new {\n  is_number(orig)\n  new := orig * 1000\n}\n\ncanonify_cpu(orig) = new {\n  not is_number(orig)\n  endswith(orig, \"m\")\n  new := to_number(replace(orig, \"m\", \"\"))\n}\n\ncanonify_cpu(orig) = new {\n  not is_number(orig)\n  not endswith(orig, \"m\")\n  re_match(\"^[0-9]+$\", orig)\n  new := to_number(orig) * 1000\n}\n\n# 10 ** 21\nmem_multiple(\"E\") = 1000000000000000000000\n\n# 10 ** 18\nmem_multiple(\"P\") = 1000000000000000000\n\n# 10 ** 15\nmem_multiple(\"T\") = 1000000000000000\n\n# 10 ** 12\nmem_multiple(\"G\") = 1000000000000\n\n# 10 ** 9\nmem_multiple(\"M\") = 1000000000\n\n# 10 ** 6\nmem_multiple(\"k\") = 1000000\n\n# 10 ** 3\nmem_multiple(\"\") = 1000\n\n# Kubernetes accepts millibyte precision when it probably shouldn't.\n# https://github.com/kubernetes/kubernetes/issues/28741\n# 10 ** 0\nmem_multiple(\"m\") = 1\n\n# 1000 * 2 ** 10\nmem_multiple(\"Ki\") = 1024000\n\n# 1000 * 2 ** 20\nmem_multiple(\"Mi\") = 1048576000\n\n# 1000 * 2 ** 30\nmem_multiple(\"Gi\") = 1073741824000\n\n# 1000 * 2 ** 40\nmem_multiple(\"Ti\") = 1099511627776000\n\n# 1000 * 2 ** 50\nmem_multiple(\"Pi\") = 1125899906842624000\n\n# 1000 * 2 ** 60\nmem_multiple(\"Ei\") = 1152921504606846976000\n\nget_suffix(mem) = suffix {\n  not is_string(mem)\n  suffix := \"\"\n}\n\nget_suffix(mem) = suffix {\n  is_string(mem)\n  count(mem) \u003e 0\n  suffix := substring(mem, count(mem) - 1, -1)\n  mem_multiple(suffix)\n}\n\nget_suffix(mem) = suffix {\n  is_string(mem)\n  count(mem) \u003e 1\n  suffix := substring(mem, count(mem) - 2, -1)\n  mem_multiple(suffix)\n}\n\nget_suffix(mem) = suffix {\n  is_string(mem)\n  count(mem) \u003e 1\n  not mem_multiple(substring(mem, count(mem) - 1, -1))\n  not mem_multiple(substring(mem, count(mem) - 2, -1))\n  suffix := \"\"\n}\n\nget_suffix(mem) = suffix {\n  is_string(mem)\n  count(mem) == 1\n  not mem_multiple(substring(mem, count(mem) - 1, -1))\n  suffix := \"\"\n}\n\nget_suffix(mem) = suffix {\n  is_string(mem)\n  count(mem) == 0\n  suffix := \"\"\n}\n\ncanonify_mem(orig) = new {\n  is_number(orig)\n  new := orig * 1000\n}\n\ncanonify_mem(orig) = new {\n  not is_number(orig)\n  suffix := get_suffix(orig)\n  raw := replace(orig, suffix, \"\")\n  re_match(\"^[0-9]+$\", raw)\n  new := to_number(raw) * mem_multiple(suffix)\n}\n\nviolation[{\"msg\": msg}] {\n  general_violation[{\"field\": \"containers\", \"msg\": msg}]\n}\n\nviolation[{\"msg\": msg}] {\n  general_violation[{\"field\": \"initContainers\", \"msg\": msg}]\n}\n\ngeneral_violation[{\"msg\": msg, \"field\": field}] {\n  container := input.review.object.spec[field][_]\n  cpu_orig := container.resources.limits.cpu\n  not canonify_cpu(cpu_orig)\n  msg := sprintf(\"container \u003c%v\u003e cpu limit \u003c%v\u003e could not be parsed\", [container.name, cpu_orig])\n}\n\ngeneral_violation[{\"msg\": msg, \"field\": field}] {\n  container := input.review.object.spec[field][_]\n  mem_orig := container.resources.limits.memory\n  not canonify_mem(mem_orig)\n  msg := sprintf(\"container \u003c%v\u003e memory limit \u003c%v\u003e could not be parsed\", [container.name, mem_orig])\n}\n\ngeneral_violation[{\"msg\": msg, \"field\": field}] {\n  container := input.review.object.spec[field][_]\n  not container.resources\n  msg := sprintf(\"container \u003c%v\u003e has no resource limits\", [container.name])\n}\n\ngeneral_violation[{\"msg\": msg, \"field\": field}] {\n  container := input.review.object.spec[field][_]\n  not container.resources.limits\n  msg := sprintf(\"container \u003c%v\u003e has no resource limits\", [container.name])\n}\n\ngeneral_violation[{\"msg\": msg, \"field\": field}] {\n  container := input.review.object.spec[field][_]\n  missing(container.resources.limits, \"cpu\")\n  msg := sprintf(\"container \u003c%v\u003e has no cpu limit\", [container.name])\n}\n\ngeneral_violation[{\"msg\": msg, \"field\": field}] {\n  container := input.review.object.spec[field][_]\n  missing(container.resources.limits, \"memory\")\n  msg := sprintf(\"container \u003c%v\u003e has no memory limit\", [container.name])\n}\n\ngeneral_violation[{\"msg\": msg, \"field\": field}] {\n  container := input.review.object.spec[field][_]\n  cpu_orig := container.resources.limits.cpu\n  cpu := canonify_cpu(cpu_orig)\n  max_cpu_orig := input.parameters.cpu\n  max_cpu := canonify_cpu(max_cpu_orig)\n  cpu \u003e max_cpu\n  msg := sprintf(\"container \u003c%v\u003e cpu limit \u003c%v\u003e is higher than the maximum allowed of \u003c%v\u003e\", [container.name, cpu_orig, max_cpu_orig])\n}\n\ngeneral_violation[{\"msg\": msg, \"field\": field}] {\n  container := input.review.object.spec[field][_]\n  mem_orig := container.resources.limits.memory\n  mem := canonify_mem(mem_orig)\n  max_mem_orig := input.parameters.memory\n  max_mem := canonify_mem(max_mem_orig)\n  mem \u003e max_mem\n  msg := sprintf(\"container \u003c%v\u003e memory limit \u003c%v\u003e is higher than the maximum allowed of \u003c%v\u003e\", [container.name, mem_orig, max_mem_orig])\n}\n","target":"admission.k8s.gatekeeper.sh"}]}}
+  creationTimestamp: "2021-09-01T19:15:21Z"
+  generation: 1
+  labels:
+    configmanagement.gke.io/configmanagement: config-management
+    k8s-app: kubernetes-config-management
+    policycontroller.configmanagement.gke.io: "true"
+  managedFields:
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:description: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:configmanagement.gke.io/configmanagement: {}
+          f:k8s-app: {}
+          f:policycontroller.configmanagement.gke.io: {}
+        f:ownerReferences:
+          .: {}
+          k:{"uid":"e1113c3f-44c2-4a94-ad86-55422839f36f"}:
+            .: {}
+            f:apiVersion: {}
+            f:blockOwnerDeletion: {}
+            f:controller: {}
+            f:kind: {}
+            f:name: {}
+            f:uid: {}
+      f:spec:
+        .: {}
+        f:crd:
+          .: {}
+          f:spec:
+            .: {}
+            f:names:
+              .: {}
+              f:kind: {}
+            f:validation:
+              .: {}
+              f:legacySchema: {}
+              f:openAPIV3Schema:
+                .: {}
+                f:properties: {}
+        f:targets: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-09-01T19:15:21Z"
+  - apiVersion: templates.gatekeeper.sh/v1beta1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        .: {}
+        f:byPod: {}
+        f:created: {}
+    manager: gatekeeper
+    operation: Update
+    time: "2021-09-01T19:15:54Z"
+  name: k8scontainerlimits
+  ownerReferences:
+  - apiVersion: configmanagement.gke.io/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigManagement
+    name: config-management
+    uid: e1113c3f-44c2-4a94-ad86-55422839f36f
+  resourceVersion: "5283432"
+  uid: 8e2f5676-3ba2-4942-ac0e-9c6da6c82537
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sContainerLimits
+      validation:
+        legacySchema: true
+        openAPIV3Schema:
+          properties:
+            cpu:
+              type: string
+            memory:
+              type: string
+  targets:
+  - rego: |
+      package k8scontainerlimits
+
+      missing(obj, field) {
+        not obj[field]
+      }
+
+      missing(obj, field) {
+        obj[field] == ""
+      }
+
+      canonify_cpu(orig) = new {
+        is_number(orig)
+        new := orig * 1000
+      }
+
+      canonify_cpu(orig) = new {
+        not is_number(orig)
+        endswith(orig, "m")
+        new := to_number(replace(orig, "m", ""))
+      }
+
+      canonify_cpu(orig) = new {
+        not is_number(orig)
+        not endswith(orig, "m")
+        re_match("^[0-9]+$", orig)
+        new := to_number(orig) * 1000
+      }
+
+      # 10 ** 21
+      mem_multiple("E") = 1000000000000000000000
+
+      # 10 ** 18
+      mem_multiple("P") = 1000000000000000000
+
+      # 10 ** 15
+      mem_multiple("T") = 1000000000000000
+
+      # 10 ** 12
+      mem_multiple("G") = 1000000000000
+
+      # 10 ** 9
+      mem_multiple("M") = 1000000000
+
+      # 10 ** 6
+      mem_multiple("k") = 1000000
+
+      # 10 ** 3
+      mem_multiple("") = 1000
+
+      # Kubernetes accepts millibyte precision when it probably shouldn't.
+      # https://github.com/kubernetes/kubernetes/issues/28741
+      # 10 ** 0
+      mem_multiple("m") = 1
+
+      # 1000 * 2 ** 10
+      mem_multiple("Ki") = 1024000
+
+      # 1000 * 2 ** 20
+      mem_multiple("Mi") = 1048576000
+
+      # 1000 * 2 ** 30
+      mem_multiple("Gi") = 1073741824000
+
+      # 1000 * 2 ** 40
+      mem_multiple("Ti") = 1099511627776000
+
+      # 1000 * 2 ** 50
+      mem_multiple("Pi") = 1125899906842624000
+
+      # 1000 * 2 ** 60
+      mem_multiple("Ei") = 1152921504606846976000
+
+      get_suffix(mem) = suffix {
+        not is_string(mem)
+        suffix := ""
+      }
+
+      get_suffix(mem) = suffix {
+        is_string(mem)
+        count(mem) > 0
+        suffix := substring(mem, count(mem) - 1, -1)
+        mem_multiple(suffix)
+      }
+
+      get_suffix(mem) = suffix {
+        is_string(mem)
+        count(mem) > 1
+        suffix := substring(mem, count(mem) - 2, -1)
+        mem_multiple(suffix)
+      }
+
+      get_suffix(mem) = suffix {
+        is_string(mem)
+        count(mem) > 1
+        not mem_multiple(substring(mem, count(mem) - 1, -1))
+        not mem_multiple(substring(mem, count(mem) - 2, -1))
+        suffix := ""
+      }
+
+      get_suffix(mem) = suffix {
+        is_string(mem)
+        count(mem) == 1
+        not mem_multiple(substring(mem, count(mem) - 1, -1))
+        suffix := ""
+      }
+
+      get_suffix(mem) = suffix {
+        is_string(mem)
+        count(mem) == 0
+        suffix := ""
+      }
+
+      canonify_mem(orig) = new {
+        is_number(orig)
+        new := orig * 1000
+      }
+
+      canonify_mem(orig) = new {
+        not is_number(orig)
+        suffix := get_suffix(orig)
+        raw := replace(orig, suffix, "")
+        re_match("^[0-9]+$", raw)
+        new := to_number(raw) * mem_multiple(suffix)
+      }
+
+      violation[{"msg": msg}] {
+        general_violation[{"field": "containers", "msg": msg}]
+      }
+
+      violation[{"msg": msg}] {
+        general_violation[{"field": "initContainers", "msg": msg}]
+      }
+
+      general_violation[{"msg": msg, "field": field}] {
+        container := input.review.object.spec[field][_]
+        cpu_orig := container.resources.limits.cpu
+        not canonify_cpu(cpu_orig)
+        msg := sprintf("container <%v> cpu limit <%v> could not be parsed", [container.name, cpu_orig])
+      }
+
+      general_violation[{"msg": msg, "field": field}] {
+        container := input.review.object.spec[field][_]
+        mem_orig := container.resources.limits.memory
+        not canonify_mem(mem_orig)
+        msg := sprintf("container <%v> memory limit <%v> could not be parsed", [container.name, mem_orig])
+      }
+
+      general_violation[{"msg": msg, "field": field}] {
+        container := input.review.object.spec[field][_]
+        not container.resources
+        msg := sprintf("container <%v> has no resource limits", [container.name])
+      }
+
+      general_violation[{"msg": msg, "field": field}] {
+        container := input.review.object.spec[field][_]
+        not container.resources.limits
+        msg := sprintf("container <%v> has no resource limits", [container.name])
+      }
+
+      general_violation[{"msg": msg, "field": field}] {
+        container := input.review.object.spec[field][_]
+        missing(container.resources.limits, "cpu")
+        msg := sprintf("container <%v> has no cpu limit", [container.name])
+      }
+
+      general_violation[{"msg": msg, "field": field}] {
+        container := input.review.object.spec[field][_]
+        missing(container.resources.limits, "memory")
+        msg := sprintf("container <%v> has no memory limit", [container.name])
+      }
+
+      general_violation[{"msg": msg, "field": field}] {
+        container := input.review.object.spec[field][_]
+        cpu_orig := container.resources.limits.cpu
+        cpu := canonify_cpu(cpu_orig)
+        max_cpu_orig := input.parameters.cpu
+        max_cpu := canonify_cpu(max_cpu_orig)
+        cpu > max_cpu
+        msg := sprintf("container <%v> cpu limit <%v> is higher than the maximum allowed of <%v>", [container.name, cpu_orig, max_cpu_orig])
+      }
+
+      general_violation[{"msg": msg, "field": field}] {
+        container := input.review.object.spec[field][_]
+        mem_orig := container.resources.limits.memory
+        mem := canonify_mem(mem_orig)
+        max_mem_orig := input.parameters.memory
+        max_mem := canonify_mem(max_mem_orig)
+        mem > max_mem
+        msg := sprintf("container <%v> memory limit <%v> is higher than the maximum allowed of <%v>", [container.name, mem_orig, max_mem_orig])
+      }
+    target: admission.k8s.gatekeeper.sh
+status:
+  byPod:
+  - id: gatekeeper-audit-79966db76-g9t4n
+    observedGeneration: 1
+    operations:
+    - audit
+    - status
+    templateUID: 8e2f5676-3ba2-4942-ac0e-9c6da6c82537
+  - id: gatekeeper-controller-manager-78bb8f574f-qthrj
+    observedGeneration: 1
+    operations:
+    - webhook
+    templateUID: 8e2f5676-3ba2-4942-ac0e-9c6da6c82537
+  - id: gatekeeper-mutation-7696499fc9-4xr86
+    observedGeneration: 1
+    operations:
+    - mutation-status
+    - webhook
+    templateUID: 8e2f5676-3ba2-4942-ac0e-9c6da6c82537
+  created: true
